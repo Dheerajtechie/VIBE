@@ -6,22 +6,33 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "setup": "node setup.js",
+    "build:prod": "node build-production.js"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.76.1",
+    "@types/leaflet": "^1.9.21",
+    "browser-image-compression": "^2.0.2",
+    "clsx": "^2.1.1",
+    "framer-motion": "^12.23.24",
+    "leaflet": "^1.9.4",
+    "next": "16.0.0",
     "react": "19.2.0",
     "react-dom": "19.2.0",
-    "next": "16.0.0"
+    "react-leaflet": "^5.0.0",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
-    "babel-plugin-react-compiler": "1.0.0",
-    "typescript": "^5",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
-    "@tailwindcss/postcss": "^4",
-    "tailwindcss": "^4",
+    "autoprefixer": "^10.4.16",
+    "babel-plugin-react-compiler": "1.0.0",
     "eslint": "^9",
-    "eslint-config-next": "16.0.0"
+    "eslint-config-next": "16.0.0",
+    "postcss": "^8.4.32",
+    "tailwindcss": "^3.4.0",
+    "typescript": "^5"
   }
 }
