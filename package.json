@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "setup": "node setup.js",
-    "build:prod": "node build-production.js"
+    "build:prod": "node build-production.js",
+    "vercel-build": "next build"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.76.1",
