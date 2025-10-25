@@ -1,7 +1,9 @@
 "use client";
 
+import dynamic from "next/dynamic";
 import { MapContainer, TileLayer, Marker, Circle } from "react-leaflet";
 import L from "leaflet";
+import { useEffect, useState } from "react";
 
 type Props = {
   center: { lat: number; lon: number };
@@ -16,6 +18,20 @@ const icon = L.icon({
 });
 
 export function MapView({ center, users = [] }: Props) {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  if (!isClient) {
+    return (
+      <div className="h-64 w-full overflow-hidden rounded-2xl ring-1 ring-black/5 flex items-center justify-center">
+        <p className="text-gray-500">Loading map...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="h-64 w-full overflow-hidden rounded-2xl ring-1 ring-black/5">
       <MapContainer center={[center.lat, center.lon]} zoom={16} scrollWheelZoom={false} className="h-full w-full">

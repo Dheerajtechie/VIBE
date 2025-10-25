@@ -41,12 +41,12 @@ export default function DiscoverPage() {
 
   useEffect(() => {
     refresh();
+    const supabase = getSupabase();
     const id = setInterval(async () => {
       const me = (await supabase.auth.getUser()).data.user;
       if (me) await supabase.from("presence").upsert({ user_id: me.id, status: "now" });
       await refresh();
     }, 20000);
-    const supabase = getSupabase();
     const channel = supabase
       .channel("vibes:me")
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "vibes" }, async (payload) => {

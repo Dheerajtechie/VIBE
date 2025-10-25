@@ -74,11 +74,8 @@ export default function ChatPage() {
       }
       setPaused("");
     } catch (e: any) {
-      if (String(e.message).toLowerCase().includes("policy") || String(e.message).toLowerCase().includes("range")) {
-        setPaused("Chat paused - moved away. Come back within 1km to resume.");
-      } else {
-        setPaused(e.message ?? "Failed to send");
-      }
+      console.error("Send message error:", e);
+      setPaused(e.message ?? "Failed to send");
     }
   }
 

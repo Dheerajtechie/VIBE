@@ -17,7 +17,7 @@ export default function ProfilePage() {
       const { data } = await supabase.from("profiles").select("name, status").eq("user_id", user.id).maybeSingle();
       if (data) {
         setName(data.name ?? "");
-        setStatus((data as any).status ?? "");
+        setStatus(data.status ?? "");
       }
     })();
   }, []);

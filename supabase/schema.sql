@@ -206,17 +206,11 @@ do $$ begin
     execute 'create policy "Delete own file" on storage.objects for delete to authenticated using (owner = auth.uid())';
   end if;
 end $$;
-create policy messages_insert_in_range on public.messages for insert with check (
+create policy messages_insert_participant on public.messages for insert with check (
   exists (
-    select 1 from conversation_participants me
-    join conversation_participants you on you.conversation_id = me.conversation_id and you.user_id <> me.user_id
-    join user_locations a on a.user_id = me.user_id
-    join user_locations b on b.user_id = you.user_id
-    where me.conversation_id = messages.conversation_id
-      and me.user_id = auth.uid()
-      and a.updated_at > now() - interval '3 minutes'
-      and b.updated_at > now() - interval '3 minutes'
-      and ST_Distance(a.geom, b.geom) <= 1000
+    select 1 from conversation_participants cp 
+    where cp.conversation_id = messages.conversation_id 
+    and cp.user_id = auth.uid()
   )
 );
 

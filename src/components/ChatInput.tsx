@@ -21,8 +21,7 @@ export function ChatInput({ onSend }: { onSend: (payload: { type: "text" | "imag
     ch.subscribe();
     return () => {
       if (presenceRef.current) {
-        // @ts-ignore
-        ch.untrack();
+        presenceRef.current.untrack();
       }
     };
   }, []);
@@ -33,7 +32,6 @@ export function ChatInput({ onSend }: { onSend: (payload: { type: "text" | "imag
     onSend({ type: "text", content: t });
     setText("");
     if (presenceRef.current) {
-      // @ts-ignore
       presenceRef.current.untrack();
     }
   }
