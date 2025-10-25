@@ -105,6 +105,11 @@ $$;
 CREATE OR REPLACE FUNCTION public.update_my_location(lat DOUBLE PRECISION, lon DOUBLE PRECISION)
 RETURNS VOID LANGUAGE plpgsql SECURITY DEFINER AS $$
 BEGIN
+  -- Check if user is authenticated
+  IF auth.uid() IS NULL THEN
+    RAISE EXCEPTION 'User must be authenticated to update location';
+  END IF;
+  
   INSERT INTO user_locations (user_id, geom, updated_at)
   VALUES (auth.uid(), ST_SetSRID(ST_MakePoint(lon, lat), 4326)::geography, NOW())
   ON CONFLICT (user_id) DO UPDATE SET geom = EXCLUDED.geom, updated_at = NOW();
