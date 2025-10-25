@@ -180,48 +180,115 @@ ALTER TABLE public.conversation_participants ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.message_reads ENABLE ROW LEVEL SECURITY;
 
--- Create RLS policies
-CREATE POLICY profiles_read_all ON public.profiles FOR SELECT USING (true);
-CREATE POLICY profiles_update_own ON public.profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY profiles_upsert_own ON public.profiles FOR UPDATE USING (auth.uid() = user_id);
+-- Create RLS policies (with IF NOT EXISTS handling)
+DO $$ 
+BEGIN
+  -- Profiles policies
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'profiles' AND policyname = 'profiles_read_all') THEN
+    CREATE POLICY profiles_read_all ON public.profiles FOR SELECT USING (true);
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'profiles' AND policyname = 'profiles_update_own') THEN
+    CREATE POLICY profiles_update_own ON public.profiles FOR INSERT WITH CHECK (auth.uid() = user_id);
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'profiles' AND policyname = 'profiles_upsert_own') THEN
+    CREATE POLICY profiles_upsert_own ON public.profiles FOR UPDATE USING (auth.uid() = user_id);
+  END IF;
 
-CREATE POLICY locations_upsert_own ON public.user_locations FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY locations_update_own ON public.user_locations FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY locations_no_select ON public.user_locations FOR SELECT USING (false);
+  -- Locations policies
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'user_locations' AND policyname = 'locations_upsert_own') THEN
+    CREATE POLICY locations_upsert_own ON public.user_locations FOR INSERT WITH CHECK (auth.uid() = user_id);
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'user_locations' AND policyname = 'locations_update_own') THEN
+    CREATE POLICY locations_update_own ON public.user_locations FOR UPDATE USING (auth.uid() = user_id);
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'user_locations' AND policyname = 'locations_no_select') THEN
+    CREATE POLICY locations_no_select ON public.user_locations FOR SELECT USING (false);
+  END IF;
 
-CREATE POLICY presence_upsert_own ON public.presence FOR INSERT WITH CHECK (auth.uid() = user_id);
-CREATE POLICY presence_update_own ON public.presence FOR UPDATE USING (auth.uid() = user_id);
-CREATE POLICY presence_read_all ON public.presence FOR SELECT USING (true);
+  -- Presence policies
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'presence' AND policyname = 'presence_upsert_own') THEN
+    CREATE POLICY presence_upsert_own ON public.presence FOR INSERT WITH CHECK (auth.uid() = user_id);
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'presence' AND policyname = 'presence_update_own') THEN
+    CREATE POLICY presence_update_own ON public.presence FOR UPDATE USING (auth.uid() = user_id);
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'presence' AND policyname = 'presence_read_all') THEN
+    CREATE POLICY presence_read_all ON public.presence FOR SELECT USING (true);
+  END IF;
 
-CREATE POLICY vibes_insert ON public.vibes FOR INSERT WITH CHECK (auth.uid() = sender_id AND auth.uid() <> receiver_id);
-CREATE POLICY vibes_select_parties ON public.vibes FOR SELECT USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
+  -- Vibes policies
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'vibes' AND policyname = 'vibes_insert') THEN
+    CREATE POLICY vibes_insert ON public.vibes FOR INSERT WITH CHECK (auth.uid() = sender_id AND auth.uid() <> receiver_id);
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'vibes' AND policyname = 'vibes_select_parties') THEN
+    CREATE POLICY vibes_select_parties ON public.vibes FOR SELECT USING (auth.uid() = sender_id OR auth.uid() = receiver_id);
+  END IF;
 
-CREATE POLICY conv_select_participant ON public.conversations FOR SELECT USING (
-  EXISTS (SELECT 1 FROM conversation_participants cp WHERE cp.conversation_id = id AND cp.user_id = auth.uid())
-);
-CREATE POLICY conv_participants_select ON public.conversation_participants FOR SELECT USING (user_id = auth.uid());
+  -- Conversations policies
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'conversations' AND policyname = 'conv_select_participant') THEN
+    CREATE POLICY conv_select_participant ON public.conversations FOR SELECT USING (
+      EXISTS (SELECT 1 FROM conversation_participants cp WHERE cp.conversation_id = id AND cp.user_id = auth.uid())
+    );
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'conversation_participants' AND policyname = 'conv_participants_select') THEN
+    CREATE POLICY conv_participants_select ON public.conversation_participants FOR SELECT USING (user_id = auth.uid());
+  END IF;
 
-CREATE POLICY messages_select_participant ON public.messages FOR SELECT USING (
-  EXISTS (
-    SELECT 1 FROM conversation_participants cp WHERE cp.conversation_id = conversation_id AND cp.user_id = auth.uid()
-  )
-);
+  -- Messages policies
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'messages' AND policyname = 'messages_select_participant') THEN
+    CREATE POLICY messages_select_participant ON public.messages FOR SELECT USING (
+      EXISTS (
+        SELECT 1 FROM conversation_participants cp WHERE cp.conversation_id = conversation_id AND cp.user_id = auth.uid()
+      )
+    );
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'public' AND tablename = 'messages' AND policyname = 'messages_insert_participant') THEN
+    CREATE POLICY messages_insert_participant ON public.messages FOR INSERT WITH CHECK (
+      EXISTS (
+        SELECT 1 FROM conversation_participants cp 
+        WHERE cp.conversation_id = messages.conversation_id 
+        AND cp.user_id = auth.uid()
+      )
+    );
+  END IF;
+END $$;
 
-CREATE POLICY messages_insert_participant ON public.messages FOR INSERT WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM conversation_participants cp 
-    WHERE cp.conversation_id = messages.conversation_id 
-    AND cp.user_id = auth.uid()
-  )
-);
-
--- Storage policies
-CREATE POLICY "Public read avatars" ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
-CREATE POLICY "Public read message_images" ON storage.objects FOR SELECT USING (bucket_id = 'message_images');
-CREATE POLICY "Upload avatars" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'avatars');
-CREATE POLICY "Upload message_images" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'message_images');
-CREATE POLICY "Update own file" ON storage.objects FOR UPDATE TO authenticated USING (owner = auth.uid());
-CREATE POLICY "Delete own file" ON storage.objects FOR DELETE TO authenticated USING (owner = auth.uid());
+-- Storage policies (with IF NOT EXISTS handling)
+DO $$ 
+BEGIN
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'Public read avatars') THEN
+    CREATE POLICY "Public read avatars" ON storage.objects FOR SELECT USING (bucket_id = 'avatars');
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'Public read message_images') THEN
+    CREATE POLICY "Public read message_images" ON storage.objects FOR SELECT USING (bucket_id = 'message_images');
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'Upload avatars') THEN
+    CREATE POLICY "Upload avatars" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'avatars');
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'Upload message_images') THEN
+    CREATE POLICY "Upload message_images" ON storage.objects FOR INSERT TO authenticated WITH CHECK (bucket_id = 'message_images');
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'Update own file') THEN
+    CREATE POLICY "Update own file" ON storage.objects FOR UPDATE TO authenticated USING (owner = auth.uid());
+  END IF;
+  
+  IF NOT EXISTS (SELECT 1 FROM pg_policies WHERE schemaname = 'storage' AND tablename = 'objects' AND policyname = 'Delete own file') THEN
+    CREATE POLICY "Delete own file" ON storage.objects FOR DELETE TO authenticated USING (owner = auth.uid());
+  END IF;
+END $$;
 
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS user_locations_geom_idx ON public.user_locations USING gist((geom::geometry));
@@ -251,13 +318,45 @@ GRANT ALL ON ALL TABLES IN SCHEMA public TO postgres, anon, authenticated, servi
 GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO postgres, anon, authenticated, service_role;
 GRANT ALL ON ALL FUNCTIONS IN SCHEMA public TO postgres, anon, authenticated, service_role;
 
--- Enable realtime for tables
-ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.presence;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.vibes;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.conversations;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.conversation_participants;
+-- Enable realtime for tables (with error handling)
+DO $$ 
+BEGIN
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.profiles;
+  EXCEPTION WHEN duplicate_object THEN
+    -- Table already in publication, ignore
+  END;
+  
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.presence;
+  EXCEPTION WHEN duplicate_object THEN
+    -- Table already in publication, ignore
+  END;
+  
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.vibes;
+  EXCEPTION WHEN duplicate_object THEN
+    -- Table already in publication, ignore
+  END;
+  
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.messages;
+  EXCEPTION WHEN duplicate_object THEN
+    -- Table already in publication, ignore
+  END;
+  
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.conversations;
+  EXCEPTION WHEN duplicate_object THEN
+    -- Table already in publication, ignore
+  END;
+  
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.conversation_participants;
+  EXCEPTION WHEN duplicate_object THEN
+    -- Table already in publication, ignore
+  END;
+END $$;
 
 -- Success message
 DO $$
