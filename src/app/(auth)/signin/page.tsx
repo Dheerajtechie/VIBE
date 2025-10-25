@@ -1,7 +1,7 @@
 "use client";
 
 import { getSupabase } from "@/lib/supabaseClient";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 export default function SignInPage() {
   const [email, setEmail] = useState("");
@@ -9,13 +9,54 @@ export default function SignInPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Check for error messages from URL
+  useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    const errorParam = urlParams.get('error');
+    const messageParam = urlParams.get('message');
+    
+    if (errorParam) {
+      let errorMessage = 'Authentication failed. Please try again.';
+      
+      switch (errorParam) {
+        case 'auth_failed':
+          errorMessage = messageParam || 'Magic link authentication failed.';
+          break;
+        case 'callback_error':
+          errorMessage = messageParam || 'Callback error occurred.';
+          break;
+        case 'no_code':
+          errorMessage = 'No authentication code received.';
+          break;
+        default:
+          errorMessage = messageParam || 'Unknown authentication error.';
+      }
+      
+      setError(errorMessage);
+    }
+  }, []);
+
   async function sendMagicLink() {
     setError(null);
     setLoading(true);
     
     try {
       console.log("📧 Sending magic link to:", email);
+      console.log("🌍 Current origin:", window.location.origin);
+      
       const supabase = getSupabase();
+      
+      // Test Supabase connection first
+      const { data: testData, error: testError } = await supabase.from("profiles").select("count").limit(1);
+      if (testError) {
+        console.error("❌ Database connection failed:", testError);
+        setError("Database connection failed. Please check your setup.");
+        setLoading(false);
+        return;
+      }
+      
+      console.log("✅ Database connection successful");
+      
       const { error } = await supabase.auth.signInWithOtp({ 
         email, 
         options: { 
@@ -25,14 +66,14 @@ export default function SignInPage() {
       
       if (error) {
         console.error("❌ Magic link error:", error);
-        setError(error.message);
+        setError(`Magic link failed: ${error.message}`);
       } else {
         console.log("✅ Magic link sent successfully");
         setSent(true);
       }
     } catch (err) {
       console.error("❌ Unexpected error:", err);
-      setError("Failed to send magic link. Please try again.");
+      setError(`Failed to send magic link: ${err instanceof Error ? err.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
