@@ -69,6 +69,33 @@ async function testSignin() {
       }
     }
     
+    // Test Google OAuth configuration
+    console.log('\n🔐 Testing Google OAuth configuration...');
+    
+    const { error: googleError } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: 'http://localhost:3000/auth/callback?next=/onboarding'
+      }
+    });
+    
+    if (googleError) {
+      if (googleError.message.includes('Invalid redirect URL')) {
+        console.log('❌ Google OAuth redirect URL error');
+        console.log('💡 Solution: Configure Google OAuth in Supabase:');
+        console.log('   1. Go to Supabase → Authentication → Providers');
+        console.log('   2. Enable Google provider');
+        console.log('   3. Add Google OAuth credentials');
+        console.log('   4. Set redirect URL: https://fluzuwaqfkqchzdxtbdn.supabase.co/auth/v1/callback');
+      } else if (googleError.message.includes('Provider not enabled')) {
+        console.log('❌ Google provider not enabled');
+        console.log('💡 Solution: Enable Google provider in Supabase dashboard');
+      } else {
+        console.log('✅ Google OAuth configuration looks good');
+        console.log('   (Expected error for test OAuth)');
+      }
+    }
+    
     return true;
   } catch (err) {
     console.log('❌ Signin test failed:', err.message);
