@@ -1,13 +1,5 @@
 {
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
   "framework": "nextjs",
-  "functions": {
-    "src/app/api/edge/route.ts": {
-      "runtime": "edge"
-    }
-  },
-  "env": {
-    "NODE_ENV": "production"
-  }
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next"
 }
