@@ -8,9 +8,38 @@ export default function OnboardingPage() {
   const [avatar, setAvatar] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [authLoading, setAuthLoading] = useState(true);
 
   useEffect(() => {
-    // redirect if already onboarded could be added later
+    // Check if user is authenticated
+    const checkAuth = async () => {
+      try {
+        const supabase = getSupabase();
+        const { data: { user }, error } = await supabase.auth.getUser();
+        
+        if (error) {
+          console.error("❌ Auth check failed:", error);
+          setError("Authentication failed. Please try again.");
+          setAuthLoading(false);
+          return;
+        }
+        
+        if (!user) {
+          console.log("❌ No user found, redirecting to signin");
+          window.location.href = "/signin";
+          return;
+        }
+        
+        console.log("✅ User authenticated:", user.email);
+        setAuthLoading(false);
+      } catch (err) {
+        console.error("❌ Auth check error:", err);
+        setError("Authentication error. Please try again.");
+        setAuthLoading(false);
+      }
+    };
+    
+    checkAuth();
   }, []);
 
   async function handleContinue() {
@@ -36,6 +65,17 @@ export default function OnboardingPage() {
     }
     await supabase.from("profiles").upsert({ user_id: user.id, name: name.trim(), avatar_url: avatarUrl });
     window.location.href = "/discover";
+  }
+
+  if (authLoading) {
+    return (
+      <div className="mx-auto flex min-h-dvh max-w-md flex-col justify-center gap-6 p-6">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600">Verifying authentication...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

@@ -19,7 +19,7 @@ export default function SignInPage() {
       const { error } = await supabase.auth.signInWithOtp({ 
         email, 
         options: { 
-          emailRedirectTo: typeof window !== "undefined" ? window.location.origin + "/onboarding" : undefined 
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/onboarding`
         } 
       });
       
