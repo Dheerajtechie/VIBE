@@ -1,6 +1,26 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 export default function Home() {
+  const [healthStatus, setHealthStatus] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Check app health
+    fetch('/api/health')
+      .then(res => res.json())
+      .then(data => {
+        console.log('🏥 Health check:', data);
+        setHealthStatus(data);
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error('❌ Health check failed:', err);
+        setLoading(false);
+      });
+  }, []);
+
   return (
     <div style={{ 
       minHeight: '100vh', 
@@ -38,8 +58,17 @@ export default function Home() {
           <p>💬 Instant Messaging</p>
         </div>
         <div style={{ marginTop: '1rem', fontSize: '0.8rem', opacity: 0.6 }}>
-          <p>✅ Server Running Successfully</p>
-          <p>✅ All Features Working</p>
+          {loading ? (
+            <p>🔍 Checking system status...</p>
+          ) : healthStatus ? (
+            <>
+              <p>{healthStatus.status === 'healthy' ? '✅' : '❌'} System Status: {healthStatus.status}</p>
+              <p>{healthStatus.supabase?.connected ? '✅' : '❌'} Database: {healthStatus.supabase?.connected ? 'Connected' : 'Disconnected'}</p>
+              <p>{healthStatus.env_vars?.supabase_url ? '✅' : '❌'} Environment: {healthStatus.env_vars?.supabase_url ? 'Configured' : 'Missing'}</p>
+            </>
+          ) : (
+            <p>⚠️ Unable to check system status</p>
+          )}
         </div>
       </div>
     </div>

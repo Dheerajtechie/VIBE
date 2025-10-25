@@ -7,13 +7,35 @@ export default function SignInPage() {
   const [email, setEmail] = useState("");
   const [sent, setSent] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
 
   async function sendMagicLink() {
     setError(null);
-    const supabase = getSupabase();
-    const { error } = await supabase.auth.signInWithOtp({ email, options: { emailRedirectTo: typeof window !== "undefined" ? window.location.origin + "/onboarding" : undefined } });
-    if (error) setError(error.message);
-    else setSent(true);
+    setLoading(true);
+    
+    try {
+      console.log("📧 Sending magic link to:", email);
+      const supabase = getSupabase();
+      const { error } = await supabase.auth.signInWithOtp({ 
+        email, 
+        options: { 
+          emailRedirectTo: typeof window !== "undefined" ? window.location.origin + "/onboarding" : undefined 
+        } 
+      });
+      
+      if (error) {
+        console.error("❌ Magic link error:", error);
+        setError(error.message);
+      } else {
+        console.log("✅ Magic link sent successfully");
+        setSent(true);
+      }
+    } catch (err) {
+      console.error("❌ Unexpected error:", err);
+      setError("Failed to send magic link. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -30,8 +52,12 @@ export default function SignInPage() {
           placeholder="Email"
           className="w-full rounded-xl border px-4 py-3"
         />
-        <button className="btn-primary w-full" onClick={sendMagicLink} disabled={!email}>
-          {sent ? "Check your email" : "Send magic link"}
+        <button 
+          className="btn-primary w-full" 
+          onClick={sendMagicLink} 
+          disabled={!email || loading}
+        >
+          {loading ? "Sending..." : sent ? "Check your email" : "Send magic link"}
         </button>
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>
